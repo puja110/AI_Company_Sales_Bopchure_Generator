@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Brochure Generator</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+      <div class="circle circle-1"></div>
+      <div class="circle circle-2"></div>
+      <div class="circle circle-3"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <i class="fas fa-magic"></i>
+          <h1>AI Brochure Generator</h1>
+        </div>
+        <p class="tagline">
+          Transform any company website into a professional brochure using AI
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <!-- Input Section -->
+        <section class="input-section card">
+          <h2><i class="fas fa-edit"></i> Generate Your Brochure</h2>
+
+          <form id="brochure-form">
+            <div class="form-group">
+              <label for="company-name">
+                <i class="fas fa-building"></i> Company Name
+              </label>
+              <input
+                type="text"
+                id="company-name"
+                name="company_name"
+                placeholder="e.g., OpenAI, Microsoft, Apple"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="company-url">
+                <i class="fas fa-globe"></i> Company Website URL
+              </label>
+              <input
+                type="url"
+                id="company-url"
+                name="url"
+                placeholder="https://example.com"
+                required
+              />
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="stream-mode" checked />
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-text">
+                  <i class="fas fa-stream"></i> Enable Streaming Mode
+                  <small>Watch the brochure generate in real-time</small>
+                </span>
+              </label>
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn btn-primary" id="generate-btn">
+                <i class="fas fa-rocket"></i> Generate Brochure
+              </button>
+              <button type="button" class="btn btn-secondary" id="clear-btn">
+                <i class="fas fa-eraser"></i> Clear
+              </button>
+            </div>
+          </form>
+
+          <!-- Progress Bar -->
+          <div
+            class="progress-container"
+            id="progress-container"
+            style="display: none"
+          >
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p class="progress-text" id="progress-text">Analyzing website...</p>
+          </div>
+        </section>
+
+        <!-- Output Section -->
+        <section
+          class="output-section card"
+          id="output-section"
+          style="display: none"
+        >
+          <div class="output-header">
+            <h2><i class="fas fa-file-alt"></i> Generated Brochure</h2>
+            <div class="output-actions">
+              <button
+                class="btn btn-icon"
+                id="copy-btn"
+                title="Copy to Clipboard"
+              >
+                <i class="fas fa-copy"></i>
+              </button>
+              <button
+                class="btn btn-icon"
+                id="download-btn"
+                title="Download as Markdown"
+              >
+                <i class="fas fa-download"></i>
+              </button>
+              <button
+                class="btn btn-icon"
+                id="download-html-btn"
+                title="Download as HTML"
+              >
+                <i class="fas fa-file-code"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Navigation -->
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="preview">
+              <i class="fas fa-eye"></i> Preview
+            </button>
+            <button class="tab-btn" data-tab="markdown">
+              <i class="fas fa-code"></i> Markdown
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <div class="tab-pane active" id="preview-tab">
+              <div class="brochure-preview" id="brochure-preview">
+                <!-- Generated content will appear here -->
+              </div>
+            </div>
+            <div class="tab-pane" id="markdown-tab">
+              <pre
+                class="markdown-content"
+              ><code id="markdown-content"></code></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section">
+          <h2 class="section-title">Why Use Our Brochure Generator?</h2>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-bolt"></i>
+              </div>
+              <h3>Lightning Fast</h3>
+              <p>Generate professional brochures in seconds, not hours</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-brain"></i>
+              </div>
+              <h3>AI-Powered</h3>
+              <p>Uses advanced AI to analyze and create compelling content</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-palette"></i>
+              </div>
+              <h3>Professional Design</h3>
+              <p>Beautiful, ready-to-use brochures for any purpose</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <i class="fas fa-download"></i>
+              </div>
+              <h3>Multiple Formats</h3>
+              <p>Download as Markdown or HTML for easy sharing</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p>&copy; 2024 AI Brochure Generator. Powered by OpenAI.</p>
+        <p class="footer-note">
+          Transform websites into professional brochures instantly
+        </p>
+      </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="spinner"></div>
+      <p>Generating your brochure...</p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+      <i class="fas fa-check-circle"></i>
+      <span id="toast-message">Success!</span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  </body>
+</html>
