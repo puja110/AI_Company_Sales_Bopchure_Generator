@@ -190,6 +190,47 @@ body {
   color: var(--primary-color);
 }
 
+.animation-btn {
+  padding: 15px;
+  border: 2px solid var(--gray-light);
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.animation-btn i {
+  font-size: 1.5rem;
+  color: var(--gray);
+}
+
+.animation-btn span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.animation-btn:hover {
+  border-color: var(--primary-color);
+  background: var(--gray-lighter);
+  transform: translateY(-2px);
+}
+
+.animation-btn.active {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+}
+
+.template-btn.active span,
+.animation-btn.active i,
+.animation-btn.active span {
+  color: white;
+}
+
 /* ============================================
    Form Styles
    ============================================ */
@@ -354,6 +395,28 @@ body {
   color: var(--white);
 }
 
+.btn-interactive {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  color: white !important;
+}
+
+.btn-interactive:hover {
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-pdf {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%) !important;
+  color: white !important;
+}
+
+.btn-pdf:hover {
+  background: linear-gradient(135deg, #ee5a6f 0%, #ff6b6b 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 /* ============================================
    Progress Bar
    ============================================ */
@@ -435,52 +498,7 @@ body {
 .output-actions {
   display: flex;
   gap: 10px;
-}
-
-/* ============================================
-   Tabs
-   ============================================ */
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 2px solid var(--gray-lighter);
-}
-
-.tab-btn {
-  padding: 12px 24px;
-  border: none;
-  background: none;
-  color: var(--gray);
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tab-btn:hover {
-  color: var(--primary-color);
-}
-
-.tab-btn.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.tab-content {
-  position: relative;
-}
-
-.tab-pane {
-  display: none;
-  animation: fadeIn 0.3s ease;
-}
-
-.tab-pane.active {
-  display: block;
+  flex-wrap: wrap;
 }
 
 @keyframes fadeIn {
@@ -739,23 +757,30 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .output-actions {
     width: 100%;
     justify-content: flex-start;
   }
+
   .features-grid {
     grid-template-columns: 1fr;
   }
+
   .toast {
     right: 15px;
     left: 15px;
     bottom: 15px;
   }
+
+  .template-options {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================
-Print Styles
-============================================ */
+   Print Styles
+   ============================================ */
 @media print {
   .header,
   .input-section,
@@ -765,8 +790,83 @@ Print Styles
   .tabs {
     display: none !important;
   }
+
   .brochure-preview {
     background: white;
     box-shadow: none;
   }
+}
+
+/* Template Grid Styles */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 20px;
+}
+
+.template-card {
+  background: white;
+  border: 3px solid var(--gray-light);
+  border-radius: 15px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.template-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.template-card.active {
+  border-color: var(--primary-color);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1),
+    rgba(139, 92, 246, 0.1)
+  );
+}
+
+.template-preview {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 2rem;
+}
+
+.template-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--dark);
+  font-weight: 700;
+}
+
+.template-card p {
+  font-size: 0.85rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+/* Brochure Preview Container */
+.brochure-preview {
+  padding: 0;
+  background: transparent;
+  border-radius: 15px;
+  min-height: 600px;
+  overflow: hidden;
+}
+
+.brochure-preview iframe {
+  width: 100%;
+  min-height: 800px;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }

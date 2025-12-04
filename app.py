@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, send_file
 from brochure_generator import BrochureGenerator
 import markdown
 import json
 import traceback
-import os  # Add this import
+import os
+from io import BytesIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -52,12 +53,10 @@ def generate():
         }), 400
     
     try:
-        # Generate brochure
         print("Generating brochure...")
         brochure_content = generator.create_brochure(company_name, url)
         
         if brochure_content:
-            # Convert markdown to HTML
             print("Converting markdown to HTML...")
             html_content = markdown.markdown(
                 brochure_content,
@@ -116,10 +115,8 @@ def generate_stream():
         try:
             print("Starting stream generation...")
             for chunk in generator.stream_brochure(company_name, url):
-                # Send each chunk as a server-sent event
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
             
-            # Send completion signal
             print("Stream generation complete")
             yield f"data: {json.dumps({'done': True})}\n\n"
             
@@ -138,11 +135,149 @@ def generate_stream():
         }
     )
 
-if __name__ == '__main__':
-    # Get port from environment variable (Render provides this)
-    port = int(os.environ.get('PORT', 5000))
+@app.route('/generate-interactive-html', methods=['POST'])
+def generate_interactive_html():
+    """Generate interactive HTML brochure with all enhancements"""
+    print("=== Interactive HTML generation request ===")
     
-    # Determine if running in production
+    try:
+        data = request.json
+        markdown_content = data.get('markdown', '')
+        company_name = data.get('company_name', 'Company')
+        company_url = data.get('company_url', '')
+        animation_style = data.get('animation_style', 'fade')
+        template_style = data.get('template_style', 'professional')
+        
+        if not markdown_content:
+            return jsonify({
+                'success': False,
+                'error': 'No content provided'
+            }), 400
+        
+        if not init_generator():
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize generator'
+            }), 500
+        
+        html_content = generator.generate_interactive_html(
+            markdown_content,
+            company_name,
+            company_url,
+            animation_style,
+            template_style
+        )
+        
+        return jsonify({
+            'success': True,
+            'html': html_content
+        })
+        
+    except Exception as e:
+        print(f"Error generating interactive HTML: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/generate-pdf', methods=['POST'])
+def generate_pdf():
+    """Generate PDF brochure"""
+    print("=== PDF generation request ===")
+    
+    try:
+        data = request.json
+        markdown_content = data.get('markdown', '')
+        company_name = data.get('company_name', 'Company')
+        company_url = data.get('company_url', '')
+        
+        if not markdown_content:
+            return jsonify({
+                'success': False,
+                'error': 'No content provided'
+            }), 400
+        
+        if not init_generator():
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize generator'
+            }), 500
+        
+        pdf_bytes = generator.generate_pdf_brochure(
+            markdown_content,
+            company_name,
+            company_url
+        )
+        
+        if pdf_bytes:
+            safe_filename = company_name.replace(' ', '_').replace('/', '_')
+            filename = f"{safe_filename}_brochure.pdf"
+            
+            return send_file(
+                BytesIO(pdf_bytes),
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to generate PDF'
+            }), 500
+        
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/extract-assets', methods=['POST'])
+def extract_assets():
+    """Extract company assets (logo, images, colors, social media)"""
+    print("=== Asset extraction request ===")
+    
+    try:
+        data = request.json
+        company_url = data.get('url', '').strip()
+        
+        if not company_url:
+            return jsonify({
+                'success': False,
+                'error': 'URL is required'
+            }), 400
+        
+        if not init_generator():
+            return jsonify({
+                'success': False,
+                'error': 'Failed to initialize generator'
+            }), 500
+        
+        logo = generator.extract_company_logo(company_url)
+        images = generator.extract_company_images(company_url, max_images=6)
+        colors = generator.extract_brand_colors(company_url, logo)
+        social_media = generator.extract_social_media(company_url)
+        
+        return jsonify({
+            'success': True,
+            'logo': logo,
+            'images': images,
+            'colors': colors,
+            'social_media': social_media
+        })
+        
+    except Exception as e:
+        print(f"Error extracting assets: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
     is_production = os.environ.get('FLASK_ENV') == 'production'
     
     print("Starting Flask application...")

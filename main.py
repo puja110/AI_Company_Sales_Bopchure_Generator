@@ -41,12 +41,10 @@ def main():
     
     args = parser.parse_args()
     
-    # Set default output filename if not provided
     if args.output is None:
         safe_name = args.company_name.replace(' ', '_').replace('/', '_')
         args.output = f"{safe_name}_brochure.md"
     
-    # Initialize generator
     try:
         generator = BrochureGenerator(model=args.model)
     except ValueError as e:
@@ -54,17 +52,13 @@ def main():
         print("\nPlease ensure you have a .env file with your OPENAI_API_KEY")
         return 1
     
-    # Generate brochure
     if args.stream:
-        # Stream with typewriter effect
         brochure_content = ""
         for chunk in generator.stream_brochure(args.company_name, args.url):
             brochure_content += chunk
     else:
-        # Generate all at once
         brochure_content = generator.create_brochure(args.company_name, args.url)
     
-    # Save to file
     if brochure_content:
         generator.save_brochure(brochure_content, args.output)
         return 0

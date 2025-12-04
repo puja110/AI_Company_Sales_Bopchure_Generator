@@ -3,6 +3,7 @@
 // ============================================
 let currentBrochureContent = "";
 let currentCompanyName = "";
+let selectedAnimation = "fade";
 
 // ============================================
 // DOM Elements
@@ -12,7 +13,6 @@ const generateBtn = document.getElementById("generate-btn");
 const clearBtn = document.getElementById("clear-btn");
 const companyNameInput = document.getElementById("company-name");
 const companyUrlInput = document.getElementById("company-url");
-const streamModeCheckbox = document.getElementById("stream-mode");
 const progressContainer = document.getElementById("progress-container");
 const progressFill = document.getElementById("progress-fill");
 const progressText = document.getElementById("progress-text");
@@ -23,18 +23,38 @@ const loadingOverlay = document.getElementById("loading-overlay");
 const toast = document.getElementById("toast");
 const toastMessage = document.getElementById("toast-message");
 
-// Tab elements
-const tabButtons = document.querySelectorAll(".tab-btn");
-const tabPanes = document.querySelectorAll(".tab-pane");
-
 // Action buttons
 const copyBtn = document.getElementById("copy-btn");
 const downloadBtn = document.getElementById("download-btn");
 const downloadHtmlBtn = document.getElementById("download-html-btn");
+const downloadInteractiveBtn = document.getElementById(
+  "download-interactive-btn"
+);
+const downloadPdfBtn = document.getElementById("download-pdf-btn");
+
+// Template and animation buttons
+const animationBtns = document.querySelectorAll(".animation-btn");
+
+let currentPreviewHtml = "";
 
 // ============================================
 // Event Listeners
 // ============================================
+
+// Animation selection
+animationBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    animationBtns.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedAnimation = btn.dataset.animation;
+    showToast(
+      `${
+        selectedAnimation.charAt(0).toUpperCase() + selectedAnimation.slice(1)
+      } animation selected`,
+      "success"
+    );
+  });
+});
 
 // Form submission
 form.addEventListener("submit", async (e) => {
@@ -42,7 +62,6 @@ form.addEventListener("submit", async (e) => {
 
   const companyName = companyNameInput.value.trim();
   let url = companyUrlInput.value.trim();
-  const streamMode = streamModeCheckbox.checked;
 
   // Validation
   if (!companyName || !url) {
@@ -53,16 +72,13 @@ form.addEventListener("submit", async (e) => {
   // Add https:// if not present
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = "https://" + url;
+    companyUrlInput.value = url;
   }
 
   currentCompanyName = companyName;
 
-  // Generate brochure
-  if (streamMode) {
-    await generateBrochureStream(companyName, url);
-  } else {
-    await generateBrochure(companyName, url);
-  }
+  // Always generate without streaming (direct preview)
+  await generateBrochure(companyName, url);
 });
 
 // Clear button
@@ -74,14 +90,6 @@ clearBtn.addEventListener("click", () => {
   currentCompanyName = "";
   brochurePreview.innerHTML = "";
   markdownContent.textContent = "";
-});
-
-// Tab switching
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const tabName = button.dataset.tab;
-    switchTab(tabName);
-  });
 });
 
 // Copy to clipboard
@@ -135,6 +143,108 @@ downloadHtmlBtn.addEventListener("click", () => {
   showToast("Downloaded as HTML!", "success");
 });
 
+// Download Interactive HTML
+downloadInteractiveBtn.addEventListener("click", async () => {
+  if (!brochurePreview.innerHTML) {
+    showToast("No content to download", "error");
+    return;
+  }
+
+  try {
+    showLoading(true);
+    showToast("Generating interactive brochure...", "warning");
+
+    // Send request to generate interactive HTML
+    const response = await fetch("/generate-interactive-html", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        markdown: currentBrochureContent,
+        company_name: currentCompanyName,
+        company_url: companyUrlInput.value,
+        animation_style: selectedAnimation,
+        template_style: selectedTemplate,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate interactive brochure");
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Download the interactive HTML
+      downloadFile(
+        data.html,
+        `${sanitizeFilename(currentCompanyName)}_interactive_brochure.html`,
+        "text/html"
+      );
+      showToast("Interactive brochure downloaded!", "success");
+    } else {
+      throw new Error(data.error || "Failed to generate");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast(
+      "Failed to generate interactive brochure: " + error.message,
+      "error"
+    );
+  } finally {
+    showLoading(false);
+  }
+});
+
+// Download as PDF
+downloadPdfBtn.addEventListener("click", async () => {
+  if (!brochurePreview.innerHTML) {
+    showToast("No content to download", "error");
+    return;
+  }
+
+  try {
+    showLoading(true);
+    showToast("Generating PDF...", "warning");
+
+    // Send request to generate PDF
+    const response = await fetch("/generate-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        markdown: currentBrochureContent,
+        company_name: currentCompanyName,
+        company_url: companyUrlInput.value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to generate PDF");
+    }
+
+    // Download the PDF
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${sanitizeFilename(currentCompanyName)}_brochure.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    showToast("PDF downloaded successfully!", "success");
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    showToast("Failed to generate PDF: " + error.message, "error");
+  } finally {
+    showLoading(false);
+  }
+});
+
 // ============================================
 // Main Functions
 // ============================================
@@ -148,7 +258,7 @@ async function generateBrochure(companyName, url) {
   try {
     // Show loading
     showLoading(true);
-    showProgress(true, "Analyzing website...");
+    showProgress(true, "Analyzing website and extracting colors...");
     setProgress(30);
 
     // Make API request
@@ -164,7 +274,7 @@ async function generateBrochure(companyName, url) {
     });
 
     setProgress(70);
-    progressText.textContent = "Generating brochure...";
+    progressText.textContent = "Generating brochure content...";
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -175,12 +285,17 @@ async function generateBrochure(companyName, url) {
     console.log("Response received:", data);
 
     if (data.success) {
+      setProgress(90);
+      progressText.textContent = "Creating interactive brochure...";
+
+      // Save the markdown content
+      currentBrochureContent = data.markdown;
+
+      // Generate interactive HTML
+      await generateAndDisplayInteractive(companyName, url, data.markdown);
+
       setProgress(100);
       progressText.textContent = "Complete!";
-
-      // Display results
-      currentBrochureContent = data.markdown;
-      displayBrochure(data.html, data.markdown);
 
       showToast("Brochure generated successfully!", "success");
     } else {
@@ -196,104 +311,82 @@ async function generateBrochure(companyName, url) {
 }
 
 /**
- * Generate brochure with streaming
+ * Generate interactive HTML and display it
  */
-async function generateBrochureStream(companyName, url) {
-  console.log("Generating brochure with streaming for:", companyName, url);
-
+async function generateAndDisplayInteractive(
+  companyName,
+  companyUrl,
+  markdownContent
+) {
   try {
-    // Show progress
-    showProgress(true, "Connecting to AI...");
-    setProgress(20);
-
-    // Clear previous content
-    brochurePreview.innerHTML =
-      '<div style="padding: 20px; text-align: center; color: #64748b;">Generating brochure...</div>';
-    markdownContent.textContent = "";
-    currentBrochureContent = "";
-
-    // Show output section immediately
-    outputSection.style.display = "block";
-    outputSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
-
-    setProgress(40);
-    progressText.textContent = "Generating brochure...";
-
-    // Make streaming request
-    const response = await fetch("/generate-stream", {
+    // Generate interactive HTML
+    const response = await fetch("/generate-interactive-html", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        markdown: markdownContent,
         company_name: companyName,
-        url: url,
+        company_url: companyUrl,
+        animation_style: "none",
+        template_style: "professional",
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to connect to server");
+      throw new Error("Failed to generate interactive brochure");
     }
 
-    setProgress(60);
+    const data = await response.json();
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    // Clear the loading message
-    brochurePreview.innerHTML = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          try {
-            const data = JSON.parse(line.slice(6));
-
-            if (data.error) {
-              throw new Error(data.error);
-            }
-
-            if (data.chunk) {
-              currentBrochureContent += data.chunk;
-              updateStreamingDisplay(currentBrochureContent);
-            }
-
-            if (data.done) {
-              setProgress(100);
-              progressText.textContent = "Complete!";
-              showToast("Brochure generated successfully!", "success");
-              setTimeout(() => showProgress(false), 1000);
-            }
-          } catch (parseError) {
-            console.error("Error parsing SSE data:", parseError);
-          }
-        }
-      }
+    if (data.success) {
+      // Display the interactive HTML directly in an iframe
+      displayInteractiveBrochure(data.html, markdownContent);
+    } else {
+      throw new Error(data.error || "Failed to generate");
     }
   } catch (error) {
-    console.error("Error:", error);
-    showToast(error.message || "An error occurred", "error");
-    showProgress(false);
-
-    // Show error in preview
-    brochurePreview.innerHTML = `
-            <div style="padding: 40px; text-align: center; color: #ef4444;">
-                <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 20px;"></i>
-                <h3>Error Generating Brochure</h3>
-                <p>${error.message}</p>
-            </div>
-        `;
+    console.error("Error generating interactive HTML:", error);
+    // Fallback to simple HTML preview
+    const simpleHtml = markdownToHTML(markdownContent);
+    displayBrochure(simpleHtml, markdownContent);
   }
+}
+
+/**
+ * Display the interactive brochure in an iframe
+ */
+function displayInteractiveBrochure(htmlContent, markdown) {
+  console.log("Displaying interactive brochure");
+
+  // Store markdown content for downloads
+  markdownContent.textContent = markdown;
+
+  // Create an iframe to display the interactive brochure
+  const iframe = document.createElement("iframe");
+  iframe.style.width = "100%";
+  iframe.style.height = "800px";
+  iframe.style.border = "none";
+  iframe.style.borderRadius = "15px";
+  iframe.style.boxShadow = "0 10px 30px rgba(0,0,0,0.1)";
+
+  // Clear previous content
+  brochurePreview.innerHTML = "";
+  brochurePreview.appendChild(iframe);
+
+  // Write the HTML content to the iframe
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(htmlContent);
+  iframe.contentDocument.close();
+
+  // Show the output section
+  outputSection.style.display = "block";
+
+  // Scroll to output section
+  setTimeout(() => {
+    outputSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
 }
 
 // ============================================
@@ -301,10 +394,10 @@ async function generateBrochureStream(companyName, url) {
 // ============================================
 
 /**
- * Display the generated brochure
+ * Display the generated brochure (fallback)
  */
 function displayBrochure(html, markdown) {
-  console.log("Displaying brochure");
+  console.log("Displaying brochure (fallback)");
   brochurePreview.innerHTML = html;
   markdownContent.textContent = markdown;
   outputSection.style.display = "block";
@@ -426,25 +519,6 @@ function markdownToHTML(markdown) {
 // ============================================
 // UI Helper Functions
 // ============================================
-
-/**
- * Switch between tabs
- */
-function switchTab(tabName) {
-  tabButtons.forEach((btn) => {
-    btn.classList.remove("active");
-    if (btn.dataset.tab === tabName) {
-      btn.classList.add("active");
-    }
-  });
-
-  tabPanes.forEach((pane) => {
-    pane.classList.remove("active");
-    if (pane.id === `${tabName}-tab`) {
-      pane.classList.add("active");
-    }
-  });
-}
 
 /**
  * Show/hide loading overlay
@@ -632,7 +706,4 @@ function generateFullHTML(content, companyName) {
 // ============================================
 document.addEventListener("DOMContentLoaded", () => {
   console.log("AI Brochure Generator initialized");
-
-  // Test toast
-  console.log("Application ready!");
 });
