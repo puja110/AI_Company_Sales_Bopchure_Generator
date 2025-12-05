@@ -277,7 +277,7 @@ def extract_assets():
         }), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5002))
     is_production = os.environ.get('FLASK_ENV') == 'production'
     
     print("Starting Flask application...")
