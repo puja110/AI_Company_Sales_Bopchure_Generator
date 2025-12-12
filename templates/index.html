@@ -6,12 +6,16 @@
     <title>AI Brochure Generator</title>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      href="{{ url_for('static', filename='css/style.css') }}"
     />
+
+    <!-- Add these libraries for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   </head>
   <body>
     <!-- Background Animation -->
@@ -100,29 +104,12 @@
           <div class="output-header">
             <h2><i class="fas fa-file-alt"></i> Generated Brochure</h2>
             <div class="output-actions">
-              <button class="btn btn-icon" id="copy-btn" title="Copy Markdown">
-                <i class="fas fa-copy"></i>
-              </button>
               <button
-                class="btn btn-icon"
-                id="download-btn"
-                title="Download as Markdown"
+                class="btn btn-icon btn-pdf"
+                id="download-pdf-btn"
+                title="Download as PDF"
               >
-                <i class="fas fa-download"></i>
-              </button>
-              <button
-                class="btn btn-icon"
-                id="download-html-btn"
-                title="Download as HTML"
-              >
-                <i class="fas fa-file-code"></i>
-              </button>
-              <button
-                class="btn btn-icon btn-interactive"
-                id="download-interactive-btn"
-                title="Download Interactive Brochure"
-              >
-                <i class="fas fa-magic"></i>
+                <i class="fas fa-file-pdf"></i> Download PDF
               </button>
             </div>
           </div>

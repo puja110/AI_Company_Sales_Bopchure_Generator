@@ -24,12 +24,6 @@ const toast = document.getElementById("toast");
 const toastMessage = document.getElementById("toast-message");
 
 // Action buttons
-const copyBtn = document.getElementById("copy-btn");
-const downloadBtn = document.getElementById("download-btn");
-const downloadHtmlBtn = document.getElementById("download-html-btn");
-const downloadInteractiveBtn = document.getElementById(
-  "download-interactive-btn"
-);
 const downloadPdfBtn = document.getElementById("download-pdf-btn");
 
 // Template and animation buttons
@@ -92,112 +86,10 @@ clearBtn.addEventListener("click", () => {
   markdownContent.textContent = "";
 });
 
-// Copy to clipboard
-copyBtn.addEventListener("click", () => {
-  if (!currentBrochureContent) {
-    showToast("No content to copy", "error");
-    return;
-  }
-
-  navigator.clipboard
-    .writeText(currentBrochureContent)
-    .then(() => {
-      showToast("Copied to clipboard!", "success");
-    })
-    .catch(() => {
-      showToast("Failed to copy", "error");
-    });
-});
-
-// Download as Markdown
-downloadBtn.addEventListener("click", () => {
-  if (!currentBrochureContent) {
-    showToast("No content to download", "error");
-    return;
-  }
-
-  downloadFile(
-    currentBrochureContent,
-    `${sanitizeFilename(currentCompanyName)}_brochure.md`,
-    "text/markdown"
-  );
-  showToast("Downloaded as Markdown!", "success");
-});
-
-// Download as HTML
-downloadHtmlBtn.addEventListener("click", () => {
-  if (!brochurePreview.innerHTML) {
-    showToast("No content to download", "error");
-    return;
-  }
-
-  const htmlContent = generateFullHTML(
-    brochurePreview.innerHTML,
-    currentCompanyName
-  );
-  downloadFile(
-    htmlContent,
-    `${sanitizeFilename(currentCompanyName)}_brochure.html`,
-    "text/html"
-  );
-  showToast("Downloaded as HTML!", "success");
-});
-
-// Download Interactive HTML
-downloadInteractiveBtn.addEventListener("click", async () => {
-  if (!brochurePreview.innerHTML) {
-    showToast("No content to download", "error");
-    return;
-  }
-
-  try {
-    showLoading(true);
-    showToast("Generating interactive brochure...", "warning");
-
-    // Send request to generate interactive HTML
-    const response = await fetch("/generate-interactive-html", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        markdown: currentBrochureContent,
-        company_name: currentCompanyName,
-        company_url: companyUrlInput.value,
-        animation_style: selectedAnimation,
-        template_style: selectedTemplate,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to generate interactive brochure");
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      // Download the interactive HTML
-      downloadFile(
-        data.html,
-        `${sanitizeFilename(currentCompanyName)}_interactive_brochure.html`,
-        "text/html"
-      );
-      showToast("Interactive brochure downloaded!", "success");
-    } else {
-      throw new Error(data.error || "Failed to generate");
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    showToast(
-      "Failed to generate interactive brochure: " + error.message,
-      "error"
-    );
-  } finally {
-    showLoading(false);
-  }
-});
-
 // Download as PDF
+// Download as PDF - Client-side generation
+// Download as PDF - Best Quality (Browser Print)
+// Download as PDF - High Quality Version
 downloadPdfBtn.addEventListener("click", async () => {
   if (!brochurePreview.innerHTML) {
     showToast("No content to download", "error");
@@ -206,37 +98,108 @@ downloadPdfBtn.addEventListener("click", async () => {
 
   try {
     showLoading(true);
-    showToast("Generating PDF...", "warning");
+    showToast("Generating high-quality PDF...", "warning");
 
-    // Send request to generate PDF
-    const response = await fetch("/generate-pdf", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        markdown: currentBrochureContent,
-        company_name: currentCompanyName,
-        company_url: companyUrlInput.value,
-      }),
-    });
+    // Get the iframe
+    const iframe = brochurePreview.querySelector("iframe");
 
-    if (!response.ok) {
-      throw new Error("Failed to generate PDF");
+    if (!iframe || !iframe.contentDocument) {
+      throw new Error("Brochure content not found");
     }
 
-    // Download the PDF
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${sanitizeFilename(currentCompanyName)}_brochure.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    // Get the content from iframe
+    const iframeBody = iframe.contentDocument.body;
+    const iframeDoc = iframe.contentDocument;
 
-    showToast("PDF downloaded successfully!", "success");
+    // Create a temporary container with better styling
+    const tempContainer = document.createElement("div");
+    tempContainer.style.width = "210mm"; // A4 width
+    tempContainer.style.background = "white";
+    tempContainer.style.padding = "0";
+    tempContainer.style.margin = "0";
+    tempContainer.innerHTML = iframeBody.innerHTML;
+
+    // Copy styles from iframe
+    const iframeStyles = iframeDoc.querySelectorAll("style");
+    iframeStyles.forEach((style) => {
+      const newStyle = document.createElement("style");
+      newStyle.textContent = style.textContent;
+      tempContainer.appendChild(newStyle);
+    });
+
+    // Append to body (hidden but visible for rendering)
+    tempContainer.style.position = "absolute";
+    tempContainer.style.left = "-9999px";
+    tempContainer.style.top = "0";
+    document.body.appendChild(tempContainer);
+
+    // Wait for images to load
+    const images = tempContainer.querySelectorAll("img");
+    await Promise.all(
+      Array.from(images).map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      })
+    );
+
+    // Generate canvas with higher quality
+    const canvas = await html2canvas(tempContainer, {
+      scale: 3, // Higher scale for better quality (was 2)
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      windowWidth: 1200,
+      windowHeight: tempContainer.scrollHeight,
+      imageTimeout: 15000,
+      removeContainer: false,
+    });
+
+    // Remove temporary container
+    document.body.removeChild(tempContainer);
+
+    // Create PDF with better settings
+    const { jsPDF } = window.jspdf;
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    const pdf = new jsPDF("p", "mm", "a4", true); // true for better compression
+
+    // Use better quality image
+    const imgData = canvas.toDataURL("image/jpeg", 0.95); // Higher quality (was 1.0)
+
+    // Add first page
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight, "", "FAST");
+    heightLeft -= pageHeight;
+
+    // Add additional pages if needed
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        0,
+        position,
+        imgWidth,
+        imgHeight,
+        "",
+        "FAST"
+      );
+      heightLeft -= pageHeight;
+    }
+
+    // Download PDF
+    const filename = `${sanitizeFilename(currentCompanyName)}_brochure.pdf`;
+    pdf.save(filename);
+
+    showToast("High-quality PDF downloaded! ✓", "success");
   } catch (error) {
     console.error("Error generating PDF:", error);
     showToast("Failed to generate PDF: " + error.message, "error");

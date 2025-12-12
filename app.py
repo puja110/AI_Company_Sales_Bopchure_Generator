@@ -1,10 +1,9 @@
-from flask import Flask, render_template, request, jsonify, Response, send_file
+from flask import Flask, render_template, request, jsonify, Response
 from brochure_generator import BrochureGenerator
 import markdown
 import json
 import traceback
 import os
-from io import BytesIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -83,58 +82,6 @@ def generate():
             'error': f'Error: {str(e)}'
         }), 500
 
-@app.route('/generate-stream', methods=['POST'])
-def generate_stream():
-    """Generate brochure with streaming"""
-    print("=== Stream generate request received ===")
-    
-    if not init_generator():
-        return Response(
-            json.dumps({
-                'error': 'Failed to initialize AI generator. Please check your API key in .env file.'
-            }),
-            mimetype='application/json',
-            status=500
-        )
-    
-    data = request.json
-    company_name = data.get('company_name', '').strip()
-    url = data.get('url', '').strip()
-    
-    print(f"Company: {company_name}, URL: {url}")
-    
-    if not company_name or not url:
-        return Response(
-            json.dumps({'error': 'Company name and URL are required'}),
-            mimetype='application/json',
-            status=400
-        )
-    
-    def generate_stream_response():
-        """Stream the brochure generation"""
-        try:
-            print("Starting stream generation...")
-            for chunk in generator.stream_brochure(company_name, url):
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-            
-            print("Stream generation complete")
-            yield f"data: {json.dumps({'done': True})}\n\n"
-            
-        except Exception as e:
-            print(f"Error in stream: {e}")
-            traceback.print_exc()
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
-    return Response(
-        generate_stream_response(),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',
-            'Connection': 'keep-alive'
-        }
-    )
-
 @app.route('/generate-interactive-html', methods=['POST'])
 def generate_interactive_html():
     """Generate interactive HTML brochure with all enhancements"""
@@ -175,101 +122,6 @@ def generate_interactive_html():
         
     except Exception as e:
         print(f"Error generating interactive HTML: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/generate-pdf', methods=['POST'])
-def generate_pdf():
-    """Generate PDF brochure"""
-    print("=== PDF generation request ===")
-    
-    try:
-        data = request.json
-        markdown_content = data.get('markdown', '')
-        company_name = data.get('company_name', 'Company')
-        company_url = data.get('company_url', '')
-        
-        if not markdown_content:
-            return jsonify({
-                'success': False,
-                'error': 'No content provided'
-            }), 400
-        
-        if not init_generator():
-            return jsonify({
-                'success': False,
-                'error': 'Failed to initialize generator'
-            }), 500
-        
-        pdf_bytes = generator.generate_pdf_brochure(
-            markdown_content,
-            company_name,
-            company_url
-        )
-        
-        if pdf_bytes:
-            safe_filename = company_name.replace(' ', '_').replace('/', '_')
-            filename = f"{safe_filename}_brochure.pdf"
-            
-            return send_file(
-                BytesIO(pdf_bytes),
-                mimetype='application/pdf',
-                as_attachment=True,
-                download_name=filename
-            )
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to generate PDF'
-            }), 500
-        
-    except Exception as e:
-        print(f"Error generating PDF: {e}")
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/extract-assets', methods=['POST'])
-def extract_assets():
-    """Extract company assets (logo, images, colors, social media)"""
-    print("=== Asset extraction request ===")
-    
-    try:
-        data = request.json
-        company_url = data.get('url', '').strip()
-        
-        if not company_url:
-            return jsonify({
-                'success': False,
-                'error': 'URL is required'
-            }), 400
-        
-        if not init_generator():
-            return jsonify({
-                'success': False,
-                'error': 'Failed to initialize generator'
-            }), 500
-        
-        logo = generator.extract_company_logo(company_url)
-        images = generator.extract_company_images(company_url, max_images=6)
-        colors = generator.extract_brand_colors(company_url, logo)
-        social_media = generator.extract_social_media(company_url)
-        
-        return jsonify({
-            'success': True,
-            'logo': logo,
-            'images': images,
-            'colors': colors,
-            'social_media': social_media
-        })
-        
-    except Exception as e:
-        print(f"Error extracting assets: {e}")
         traceback.print_exc()
         return jsonify({
             'success': False,
